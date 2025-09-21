@@ -11,6 +11,7 @@ interface PopupProps {
   confirmText?: string;
   cancelText?: string;
   showCancel?: boolean;
+  autoCloseMs?: number;
 }
 
 const PopupComponent = ({
@@ -22,7 +23,8 @@ const PopupComponent = ({
   message = 'Do you want to continue?',
   confirmText = 'Yes',
   cancelText = 'No',
-  showCancel = true
+  showCancel,
+  autoCloseMs
 }: PopupProps) => {
   // Close popup when pressing Escape key
   useEffect(() => {
@@ -43,6 +45,17 @@ const PopupComponent = ({
       document.body.style.overflow = 'unset';
     };
   }, [isOpen, onClose]);
+
+  // Auto close for success popups without actions
+  useEffect(() => {
+    if (!isOpen) return;
+    if (!onConfirm && type === 'success') {
+      const timeout = setTimeout(() => {
+        onClose();
+      }, autoCloseMs ?? 1500);
+      return () => clearTimeout(timeout);
+    }
+  }, [isOpen, onConfirm, type, autoCloseMs, onClose]);
 
   if (!isOpen) return null;
 
@@ -73,14 +86,14 @@ const PopupComponent = ({
         };
       case 'info':
         return {
-          bgColor: 'bg-blue-500',
+          bgColor: 'bg-yellow-500',
           icon: (
             <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           ),
           title: title || 'INFO!',
-          confirmColor: 'bg-blue-500 hover:bg-blue-600'
+          confirmColor: 'bg-yellow-500 hover:bg-yellow-600'
         };
       case 'warning':
       default:
@@ -114,7 +127,7 @@ const PopupComponent = ({
 
   return (
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-md transition-colors"
       onClick={handleBackdropClick}
     >
       {/* Popup Container */}
@@ -143,29 +156,36 @@ const PopupComponent = ({
 
         {/* Buttons Section */}
         <div className="px-8 py-6">
-          <div className="flex gap-4">
-            {/* Confirm Button */}
-            <button
-              onClick={handleConfirm}
-              className={`flex-1 ${config.confirmColor} text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 transform hover:scale-105 shadow-lg focus:outline-none focus:ring-4 focus:ring-opacity-50`}
-              style={{ 
-                boxShadow: '0 4px 15px rgba(0,0,0,0.2)'
-              }}
-            >
-              {confirmText}
-            </button>
-            
-            {/* Cancel Button */}
-            {showCancel && (
-              <button
-                onClick={onClose}
-                className="flex-1 bg-gray-400 hover:bg-gray-500 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 transform hover:scale-105 shadow-lg focus:outline-none focus:ring-4 focus:ring-gray-300 focus:ring-opacity-50"
-                style={{ boxShadow: '0 4px 15px rgba(0,0,0,0.2)' }}
-              >
-                {cancelText}
-              </button>
-            )}
-          </div>
+          {(!onConfirm && type === 'success') ? (
+            // Tidak tampilkan tombol apapun untuk success tanpa aksi
+            <div className="text-center text-sm text-gray-500">Menutup otomatis...</div>
+          ) : (
+            <div className="flex gap-4">
+              {/* Confirm Button - tampil hanya jika ada onConfirm */}
+              {onConfirm && (
+                <button
+                  onClick={handleConfirm}
+                  className={`flex-1 ${config.confirmColor} text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 transform hover:scale-105 shadow-lg focus:outline-none focus:ring-4 focus:ring-opacity-50`}
+                  style={{ 
+                    boxShadow: '0 4px 15px rgba(0,0,0,0.2)'
+                  }}
+                >
+                  {confirmText}
+                </button>
+              )}
+              
+              {/* Cancel Button - default tampil jika ada onConfirm, bisa dipaksa via prop */}
+              {(showCancel ?? Boolean(onConfirm)) && (
+                <button
+                  onClick={onClose}
+                  className="flex-1 bg-gray-400 hover:bg-gray-500 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 transform hover:scale-105 shadow-lg focus:outline-none focus:ring-4 focus:ring-gray-300 focus:ring-opacity-50"
+                  style={{ boxShadow: '0 4px 15px rgba(0,0,0,0.2)' }}
+                >
+                  {cancelText}
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>
